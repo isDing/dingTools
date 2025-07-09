@@ -47,15 +47,18 @@ else
     echo "当前目录下未找到 .tmux.conf 文件，跳过拷贝与加载。"
 fi
 
-# 安装 tmux 插件
+# 安装插件并清理无用插件
 TPM_PATH="$HOME/.tmux/plugins/tpm"
-if [ -d "$TPM_PATH" ]; then
-    "$TPM_PATH/bin/install_plugins"
-else
-    echo "TPM (tmux plugin manager) 未安装，正在尝试克隆..."
+if [ ! -d "$TPM_PATH" ]; then
+    echo "TPM 未安装，正在克隆..."
     git clone https://github.com/tmux-plugins/tpm "$TPM_PATH"
-    "$TPM_PATH/bin/install_plugins"
 fi
+
+# 安装 .tmux.conf 中声明的插件
+"$TPM_PATH/bin/install_plugins"
+"$TPM_PATH/bin/clean_plugins"
+"$TPM_PATH/bin/update_plugins"
+echo "已更新配置文件中的插件。"
 
 echo "脚本执行完成。"
 
