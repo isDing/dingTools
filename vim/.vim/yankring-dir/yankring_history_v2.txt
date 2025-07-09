@@ -1,0 +1,4 @@
+c,v
+r,v
+f,v
+# 拷贝当前目录下的 .vimrc 到 ~/if [ -f ".vimrc" ]; then    cp .vimrc "$HOME/.vimrc"    echo "已将 .vimrc 拷贝到 ~/"else    echo "未找到当前目录下的 .vimrc 文件，跳过复制。"fi,V
