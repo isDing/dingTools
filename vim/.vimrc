@@ -358,6 +358,8 @@ call plug#end()
 if exists('plugs') && has_key(plugs, 'vim-colorschemes')
             \ && filereadable(plugs['vim-colorschemes']['dir'].'/colors/molokai.vim')
     colorscheme molokai
+	" 设置背景色随终端透明
+	highlight Normal ctermbg=NONE guibg=NONE
 endif
 
 " rbong/vim-crystalline
