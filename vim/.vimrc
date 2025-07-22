@@ -1,5 +1,6 @@
 " *************************************************************************
 " presettings
+" Source project address: https://github.com/NewComer00/my-vimrc
 " *************************************************************************
 
 " ASCII art -- https://patorjk.com/software/taag/#p=display&f=Small&t=MY-VIMRC
@@ -28,17 +29,28 @@ let GITHUB_RAW = 'https://raw.githubusercontent.com/'
 " *************************************************************************
 
 set encoding=utf8
+" 设置不兼容Vi
 set nocompatible
 
+" 如果支持终端真彩色 termguicolors 则启用。
 if has('termguicolors')
     set termguicolors
 endif
+" 确保在tmux中正确显示
+if exists('+termguicolors') && $TERM == 'tmux-256color'
+  let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
+  let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
+  set termguicolors
+endif
 
+
+" 优化滚动性能
 " speed up vim scrolling
 " https://stackoverflow.com/questions/307148/vim-scrolling-slowly
 set ttyfast
 set lazyredraw
 
+" 优化正则表达式引擎性能
 " speed up syntax highlighting & regex performance
 " https://vi.stackexchange.com/a/21641
 " https://gist.github.com/glts/5646749
@@ -46,43 +58,47 @@ if exists('&regexpengine')
   set regexpengine=1
 endif
 
+" 允许退格键删除缩进、换行等
 " to enable backspace key
 " https://vi.stackexchange.com/a/2163
 set backspace=indent,eol,start
 
+" 关闭可视响铃
 set novisualbell
 
+" 修复Windows终端替换模式问题
 " to deal with REPLACE MODE problem on windows cmd or windows terminal
 " https://superuser.com/a/1525060
 set t_u7=
 
-if exists('+termguicolors') && $TERM == 'tmux-256color'
-  let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
-  let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
-  set termguicolors
-endif
-
+" 设置256色, 并开启语法高亮
 set t_Co=256
 syntax on
 
+" 高亮搜索hlsearch、增量搜索incsearch、忽略大小写ignorecase但智能大小写smartcase
 set hlsearch
 set incsearch
 set ignorecase
 set smartcase
 
+" 显示行号、相对行号
 set number
 set relativenumber
 
+" 不自动换行
 set nowrap
 
+" 高亮光标行
 set cursorline
 
+" 缩进设置
+" 制表符宽度、缩进宽度、使用空格代替制表符、自动缩进
 set tabstop=4
 set shiftwidth=4
 set expandtab
-
 set autoindent
 
+" 命令行补全模式
 set wildmode=longest,full
 set wildmenu
 
@@ -95,32 +111,38 @@ else
     set ttymouse=xterm2
 end
 
+" 始终显示状态栏和命令栏
 set laststatus=2
 
+" 新分割窗口出现在下方和右侧
 set splitbelow
 set splitright
 
+" 设置字典和补全选项
 set dictionary+=/usr/share/dict/words
 set complete+=k
 
+" 设置可见的特殊字符, 默认关闭
 " to be compatable with older version
 " https://stackoverflow.com/a/36374234/15283141
-" if has("patch-7.4.710")
-"     set listchars=eol:↵,tab:\|\|,trail:~,extends:>,precedes:<,space:·
-" else
-"     set listchars=eol:↵,tab:\|\|,trail:~,extends:>,precedes:<
-" endif
+if has("patch-7.4.710")
+    set listchars=eol:↵,tab:\|\|,trail:~,extends:>,precedes:<,space:·
+else
+    set listchars=eol:↵,tab:\|\|,trail:~,extends:>,precedes:<
+endif
 " set list
 
+" 设置持久撤销undofile, 并创建撤销文件目录
 " Let's save undo info!
 " from https://vi.stackexchange.com/a/53
-let s:undo_dir = expand(DATA_DIR.'/undo-dir')
-if !isdirectory(s:undo_dir)
-    call mkdir(s:undo_dir, "p", 0700)
-endif
-let &undodir = s:undo_dir
-set undofile
+" let s:undo_dir = expand(DATA_DIR.'/undo-dir')
+" if !isdirectory(s:undo_dir)
+"     call mkdir(s:undo_dir, "p", 0700)
+" endif
+" let &undodir = s:undo_dir
+" set undofile
 
+" 设置标签文件 tags 的搜索路径
 " search tags file recursively
 " https://stackoverflow.com/a/5019111/15283141
 set tags=./tags,./TAGS,tags;~,TAGS;~
@@ -187,6 +209,7 @@ function! OpenShell()
     endif
 endfunction
 
+" 快捷函数用于制表符和空格之间的切换"
 " allow toggling between local and default mode
 " https://vim.fandom.com/wiki/Toggle_between_tabs_and_spaces
 function! TabToggle()
@@ -202,41 +225,53 @@ endfunction
 " *************************************************************************
 let mapleader = "\<space>"
 
-" 按 \c 注释/取消注释
-vmap <space>c :s/^/# /<CR>:noh<CR>
-vmap <space>v :s/^# //<CR>:noh<CR>
-
 " easier navigation between split windows
 nnoremap <c-j> <c-w>j
 nnoremap <c-k> <c-w>k
 nnoremap <c-h> <c-w>h
 nnoremap <c-l> <c-w>l
 
-" quickly edit this config file
+" quickly edit this config file, 在新标签页打开vimrc
 nnoremap <leader>ve :tabnew $MYVIMRC<CR>
-" quickly save and source this config file
+" quickly save and source this config file, 保存并重新加载vimrc
 nnoremap <leader>vs :wa<Bar>so $MYVIMRC<CR>
 
-" toggle paste mode
+" toggle paste mode, 设置粘贴模式
 nnoremap <leader>p :set paste!<CR>
 
-" toggle list char
+" toggle list char, 打开、关闭可视化符号
 nnoremap <leader>l :set list!<CR>
 
-" toggle tab/spaces
+" toggle tab/spaces, 制表符和空格之间的切换
 nnoremap <leader>t :call TabToggle()<CR>
 
-" strip trailing whitespaces
+" strip trailing whitespaces, 删除全文的行尾空格
 " https://vi.stackexchange.com/a/2285
 nnoremap <leader>s :let _s=@/<Bar>:%s/\s\+$//e<Bar>:let @/=_s<Bar><CR>
 
 " switch between tabs
-nnoremap <leader>} :tabnext<CR>
-nnoremap <leader>{ :tabprevious<CR>
+nnoremap <leader>] :tabnext<CR>
+nnoremap <leader>[ :tabprevious<CR>
+
+" 快速退出、删除当前标签页
+nnoremap <leader>q :q<CR>
+" 快速保存
+nnoremap <leader>w :w<CR>
+" 保存全部
+nnoremap <leader>e :wa<CR>
 
 " switch between buffers
-nnoremap <leader>] :bnext<CR>
-nnoremap <leader>[ :bprevious<CR>
+nnoremap <leader>} :bnext<CR>
+nnoremap <leader>{ :bprevious<CR>
+
+" 调整高度
+nnoremap <leader>k :resize +1<CR>
+nnoremap <leader>j :resize -1<CR>
+
+" 调整宽度
+nnoremap <leader>h :vertical resize -1<CR>
+nnoremap <leader>l :vertical resize +1<CR>
+
 
 " *************************************************************************
 " plugin manager
@@ -311,11 +346,14 @@ Plug GITHUB_SITE.'flazz/vim-colorschemes'
 " mostly used
 " --------------------
 Plug GITHUB_SITE.'preservim/nerdtree', { 'on': 'NERDTreeToggle' }
+Plug GITHUB_SITE.'Xuyuanp/nerdtree-git-plugin'
+Plug GITHUB_SITE.'jistr/vim-nerdtree-tabs'
 Plug GITHUB_SITE.'rbong/vim-crystalline', { 'branch': 'vim-7' }
 Plug GITHUB_SITE.'mbbill/undotree'
 Plug GITHUB_SITE.'preservim/tagbar', { 'on': 'TagbarToggle' }
 Plug GITHUB_SITE.'NewComer00/ack.vim', { 'branch': 'patch-1' }
 Plug GITHUB_SITE.'vim-scripts/YankRing.vim'
+Plug GITHUB_SITE.'ycm-core/YouCompleteMe'
 
 " --------------------
 " more convenience
@@ -350,6 +388,48 @@ endif
 
 call plug#end()
 
+
+" *************************************************************************
+" plugin configs functions
+" *************************************************************************
+" NERDTree funcions
+function! OverrideNERDTreeTabOpen()
+  unmap <buffer> t
+  nnoremap <buffer> t :call NERDTreeOpenInTabWithSameRoot()<CR>
+endfunction
+
+function! NERDTreeOpenInTabWithSameRoot()
+  " 获取当前选中的节点
+  let node = g:NERDTreeFileNode.GetSelected()
+"   if type(node) != type({}) || !node.exists('path')
+"     echo "请选择一个文件"
+"     return
+"   endif
+
+  let filepath = node.path.str()
+  if node.path.isDirectory
+    echo "不能用 t 打开目录"
+    return
+  endif
+
+  " 获取当前 NERDTree 的根路径（使用 buffer-local）
+  let root_path = b:NERDTree.root.path.str()
+
+  " 使用 nerdtree-tabs 插件打开新标签页（自动加载 NERDTree）
+  " execute 'NERDTreeTabsOpen'
+  tabnew
+
+  " 切换左侧 NERDTree 窗口，并 cd 到旧目录（以保持根目录一致）
+  wincmd h
+  execute 'cd' fnameescape(root_path)
+  execute 'NERDTreeCWD'
+
+  " 切换到右侧窗口并打开文件
+  wincmd l
+  execute 'edit' fnameescape(filepath)
+endfunction
+
+
 " *************************************************************************
 " plugin configs
 " *************************************************************************
@@ -358,22 +438,22 @@ call plug#end()
 if exists('plugs') && has_key(plugs, 'vim-colorschemes')
             \ && filereadable(plugs['vim-colorschemes']['dir'].'/colors/molokai.vim')
     colorscheme molokai
-	" 设置背景色随终端透明
-	highlight Normal ctermbg=NONE guibg=NONE
+    " 设置背景透明度跟随终端
+    highlight Normal ctermbg=NONE guibg=NONE
 endif
 
-" rbong/vim-crystalline
+" rbong/vim-crystalline 状态栏设置
 function! StatusLine(...)
   return crystalline#mode() . crystalline#right_mode_sep('Line')
         \ . ' %f%h%w%m%r ' . crystalline#right_sep('Line', 'Fill') . '%='
         \ . crystalline#left_sep('Line', 'Fill')
-        \ . ' %{&ft} [%{&fenc!=#""?&fenc:&enc}] [%{&ff}] Line:%l/%L Col:%c%V %P '
+        \ . ' %{&ft} [%{&fenc!=#""?&fenc:&enc}] [%{&ff}] [%{&expandtab?"SPACE":"TAB"}:%{&shiftwidth}] Line:%l/%L Col:%c%V %P '
 endfunction
 let g:crystalline_statusline_fn = 'StatusLine'
 let g:crystalline_theme = 'jellybeans'
 
 " preservim/nerdtree
-let NERDTreeWinPos="right"
+let NERDTreeWinPos="left"
 let NERDTreeShowHidden=1
 let NERDTreeMouseMode=2
 " disable the original file explorer
@@ -390,9 +470,16 @@ augroup nerd_loader
         \|   execute 'autocmd! nerd_loader'
         \| endif
 augroup END
+" 推荐开启：切换 tab 时自动重用 NERDTree
+let g:nerdtree_tabs_open_on_console_startup = 0
+let g:nerdtree_tabs_open_on_new_tab = 1
+let g:nerdtree_tabs_smart_startup_focus = 1
+let g:nerdtree_tabs_autofind = 1
+" 在 NERDTree 中按 t 打开文件到新 tab，保留原目录树结构
+autocmd FileType nerdtree call OverrideNERDTreeTabOpen()
 
 " preservim/tagbar
-let g:tagbar_position = 'vertical leftabove'
+let g:tagbar_position = 'vertical rightbelow'
 let g:tagbar_width = max([25, winwidth(0) / 5])
 
 " mileszs/ack.vim
@@ -400,7 +487,7 @@ if executable('ag')
     let g:ackprg = 'ag --vimgrep --hidden --ignore .git'
 endif
 
-" rainbow/luochen1990
+" rainbow/luochen1990, 颜色括号
 let g:rainbow_active = 1
 let g:rainbow_conf = {
 \   'separately': {
@@ -408,7 +495,7 @@ let g:rainbow_conf = {
 \   }
 \}
 
-" vim-scripts/YankRing.vim
+" vim-scripts/YankRing.vim, 剪切板历史记录
 " to avoid <C-p> collision with the ctrlp plugin
 let g:yankring_replace_n_pkey = '<m-p>'
 let g:yankring_replace_n_nkey = '<m-n>'
@@ -488,3 +575,4 @@ nmap cY <Plug>SystemCopyLine
 nmap cp <Plug>SystemPaste
 xmap cp <Plug>SystemPaste
 nmap cP <Plug>SystemPasteLine
+
