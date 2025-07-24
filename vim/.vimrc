@@ -231,6 +231,9 @@ nnoremap <c-k> <c-w>k
 nnoremap <c-h> <c-w>h
 nnoremap <c-l> <c-w>l
 
+" 集成终端中快速退出终端模式
+tnoremap <c-q> <c-\><c-n>
+
 " quickly edit this config file, 在新标签页打开vimrc
 nnoremap <leader>ve :tabnew $MYVIMRC<CR>
 " quickly save and source this config file, 保存并重新加载vimrc
