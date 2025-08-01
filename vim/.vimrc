@@ -395,6 +395,10 @@ call plug#end()
 " *************************************************************************
 " plugin configs functions
 " *************************************************************************
+
+" 设置 cpp 文件的注释风格
+autocmd FileType cpp setlocal commentstring=//\ %s
+
 " NERDTree funcions
 function! OverrideNERDTreeTabOpen()
   unmap <buffer> t
