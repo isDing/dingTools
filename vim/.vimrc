@@ -22,6 +22,8 @@ let MY_VIMRC_BASIC = 0
 
 " mirrors for github site & github raw
 let GITHUB_SITE = 'https://github.com/'
+" github 无法访问时，使用下面的克隆地址 https://docs.suanlix.cn/github.html
+" let GITHUB_SITE = 'https://gh.llkk.cc/https://github.com/'
 let GITHUB_RAW = 'https://raw.githubusercontent.com/'
 
 " *************************************************************************
