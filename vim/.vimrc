@@ -358,7 +358,8 @@ Plug GITHUB_SITE.'mbbill/undotree'
 Plug GITHUB_SITE.'preservim/tagbar', { 'on': 'TagbarToggle' }
 Plug GITHUB_SITE.'NewComer00/ack.vim', { 'branch': 'patch-1' }
 Plug GITHUB_SITE.'vim-scripts/YankRing.vim'
-Plug GITHUB_SITE.'ycm-core/YouCompleteMe'
+" Plug GITHUB_SITE.'ycm-core/YouCompleteMe'
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " --------------------
 " more convenience
@@ -397,6 +398,26 @@ call plug#end()
 " *************************************************************************
 " plugin configs functions
 " *************************************************************************
+
+" coc-nvim 状态栏信息输出
+function! CocDiagnosticStatus()
+  let info = get(b:, 'coc_diagnostic_info', {})
+  if empty(info) | return '' | endif
+  let msgs = []
+  if get(info, 'error', 0)
+    call add(msgs, 'Error:' . info['error'])
+  endif
+  if get(info, 'warning', 0)
+    call add(msgs, 'Warning:' . info['warning'])
+  endif
+  if get(info, 'information', 0)
+    call add(msgs, 'Information:' . info['information'])
+  endif
+  if get(info, 'hint', 0)
+    call add(msgs, 'Hint:' . info['hint'])
+  endif
+  return join(msgs, ' ')
+endfunction
 
 " 设置 cpp 文件的注释风格
 autocmd FileType cpp setlocal commentstring=//\ %s
@@ -443,6 +464,105 @@ endfunction
 " plugin configs
 " *************************************************************************
 
+" --------------------------------- coc.nvim start ---------------------------------------
+" 关闭备份文件，否则某些语言服务会因写入失败（比如文件锁）导致报错
+set nobackup
+set nowritebackup
+" 设置 CursorHold 事件的触发时间（300 毫秒），影响诊断信息悬浮窗口出现的延迟
+set updatetime=300
+" 始终显示 signcolumn（警告/错误提示列），避免显示/隐藏时窗口内容左右抖动
+set signcolumn=yes
+" 插入模式下按下 Tab 键时的行为：
+" - 如果补全菜单已打开：选择下一个候选项
+" - 如果光标前是空格：插入一个 Tab
+" - 否则：手动触发补全
+inoremap <silent><expr> <TAB>
+      \ coc#pum#visible() ? coc#pum#next(1) :
+      \ CheckBackspace() ? "\<Tab>" :
+      \ coc#refresh()
+" 插入模式下按 Shift-Tab 的行为：
+" - 如果补全菜单打开：选择上一个候选项
+" - 否则：回退一个字符（相当于 <C-h>）
+inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
+" 回车键行为：
+" - 如果补全菜单打开：确认选择的候选项
+" - 否则：插入回车，并调用 coc 的 on_enter 逻辑（例如触发格式化、自动导入等）
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
+                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+" 插入模式下按 Ctrl-Space 手动触发补全（兼容性写法）
+inoremap <silent><expr> <c-space> coc#refresh()
+" 光标前是否是空格或位于行首，用于辅助判断是否应该插入真正的 Tab
+function! CheckBackspace() abort
+  let col = col('.') - 1
+  return !col || getline('.')[col - 1]  =~# '\s'
+endfunction
+" 悬浮文档（类似 VSCode 的悬停提示），光标在符号上按 K 显示文档信息
+nnoremap <silent> K :call ShowDocumentation()<CR>
+" 跳转到上一个诊断（警告/错误）
+nmap <silent> [g <Plug>(coc-diagnostic-prev)
+" 跳转到下一个诊断（警告/错误）
+nmap <silent> ]g <Plug>(coc-diagnostic-next)
+" 跳转到定义
+nmap <silent> gd <Plug>(coc-definition)
+" 跳转到类型定义
+nmap <silent> gy <Plug>(coc-type-definition)
+" 跳转到实现
+nmap <silent> gi <Plug>(coc-implementation)
+" 跳转到所有引用
+nmap <silent> gr <Plug>(coc-references)
+" 使用 Coc 提供的文本对象操作函数范围，支持 viif/vic 等操作(选中、复制)整个函数/类
+xmap <silent> if <Plug>(coc-funcobj-i)
+omap <silent> if <Plug>(coc-funcobj-i)
+xmap <silent> af <Plug>(coc-funcobj-a)
+omap <silent> af <Plug>(coc-funcobj-a)
+xmap <silent> ic <Plug>(coc-classobj-i)
+omap <silent> ic <Plug>(coc-classobj-i)
+xmap <silent> ac <Plug>(coc-classobj-a)
+omap <silent> ac <Plug>(coc-classobj-a)
+" 如果支持弹窗（float window），启用滚动操作（向下/向上翻页）
+nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
+nnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
+inoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? "\<C-r>=coc#float#scroll(1)\<CR>" : "\<Right>"
+inoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? "\<C-r>=coc#float#scroll(0)\<CR>" : "\<Left>"
+" 重命名符号
+nmap <leader>rn <Plug>(coc-rename)
+" 格式化选中的代码（可视模式和普通模式下）
+xmap <leader>f  <Plug>(coc-format-selected)
+nmap <leader>f  <Plug>(coc-format-selected)
+" 执行当前诊断的修复建议（例如快速修复 import）
+" nmap <leader>qf <Plug>(coc-fix-current)
+" " 选中范围内的代码操作（Code Action）
+" nmap <leader>a  <Plug>(coc-codeaction-selected)
+" xmap <leader>a  <Plug>(coc-codeaction-selected)
+" " 光标所在位置的代码操作（通常用于快速修复或添加 import）
+" nmap <leader>ac  <Plug>(coc-codeaction-cursor)
+" " 显示可用的重构操作
+" nmap <leader>re <Plug>(coc-codeaction-refactor)
+" " 选中范围内可用的重构操作
+" xmap <leader>r  <Plug>(coc-codeaction-refactor-selected)
+" nmap <leader>r  <Plug>(coc-codeaction-refactor-selected)
+" 显示浮动窗口中的上一个或下一个跳转位置（例如 symbol 跳转列表）
+nmap <silent> <C-j> <Plug>(coc-float-jump)
+nmap <silent> <C-k> <Plug>(coc-float-jump)
+" 注册自定义命令：:Format（格式化当前 buffer）
+command! -nargs=0 Format :call CocActionAsync('format')
+" 注册自定义命令：:Fold（调用 LSP 的折叠操作）
+command! -nargs=? Fold :call CocAction('fold', <f-args>)
+" " 注册自定义命令：:OR（组织 import，适用于 TS/JS 等语言）
+" command! -nargs=0 OR   :call CocActionAsync('runCommand', 'editor.action.organizeImport')
+" 显示当前函数签名（自动触发的，可以手动调用）
+autocmd CursorHold * silent call CocActionAsync('highlight')
+" 显示 CocList 各种交互界面（类似 Telescope 的界面）
+nnoremap <silent><nowait> <leader>Ca  :<C-u>CocList diagnostics<cr>
+nnoremap <silent><nowait> <leader>Ce  :<C-u>CocList extensions<cr>
+nnoremap <silent><nowait> <leader>Cc  :<C-u>CocList commands<cr>
+nnoremap <silent><nowait> <leader>Co  :<C-u>CocList outline<cr>
+nnoremap <silent><nowait> <leader>Cs  :<C-u>CocList -I symbols<cr>
+nnoremap <silent><nowait> <leader>Cj  :<C-u>CocNext<CR>
+nnoremap <silent><nowait> <leader>Ck  :<C-u>CocPrev<CR>
+nnoremap <silent><nowait> <leader>Cp  :<C-u>CocListResume<CR>
+" --------------------------------- coc.nvim end ---------------------------------------
+
 " flazz/vim-colorschemes
 if exists('plugs') && has_key(plugs, 'vim-colorschemes')
             \ && filereadable(plugs['vim-colorschemes']['dir'].'/colors/molokai.vim')
@@ -455,6 +575,7 @@ endif
 function! StatusLine(...)
   return crystalline#mode() . crystalline#right_mode_sep('Line')
         \ . ' %f%h%w%m%r ' . crystalline#right_sep('Line', 'Fill') . '%='
+        \ . CocDiagnosticStatus() . ' ' . get(g:, 'coc_status', '')
         \ . crystalline#left_sep('Line', 'Fill')
         \ . ' %{&ft} [%{&fenc!=#""?&fenc:&enc}] [%{&ff}] [%{&expandtab?"SPACE":"TAB"}:%{&shiftwidth}] Line:%l/%L Col:%c%V %P '
 endfunction
