@@ -398,10 +398,20 @@ endif
 call plug#end()
 
 " coc.nvim 扩展插件
+" 语言支持插件: json, python, C++, lua, yaml, cmake, bash
+" 工具链插件: 代码片段, 诊断, 自动修复, git
 let g:COCNVIM_EXTENSIONS=[
-\ 'coc-pyright',
 \ 'coc-json',
-\ 'coc-clangd'
+\ 'coc-pyright',
+\ 'coc-clangd',
+\ 'coc-sumneko-lua',
+\ 'coc-yaml',
+\ 'coc-cmake',
+\ 'coc-sh',
+\ 'coc-snippets',
+\ 'coc-diagnostic',
+\ 'coc-lightbulb',
+\ 'coc-git'
 \]
 
 " *************************************************************************
@@ -433,15 +443,15 @@ function! s:PromptCocExtensionInstall() abort
   let coc_extensions_dir = expand(get(g:, 'coc_data_home', '~/.config/coc') . '/extensions/node_modules')
   " 检查目录是否存在
   if !isdirectory(coc_extensions_dir)
-    echoerr 'Coc extensions directory not found: ' . coc_extensions_dir
-    return
+      let g:COCNVIM_ToInstall = copy(g:COCNVIM_EXTENSIONS)
+  else
+      let g:COCNVIM_ToInstall = []
+      for ext in g:COCNVIM_EXTENSIONS
+        if !isdirectory(coc_extensions_dir . '/' . ext)
+          call add(g:COCNVIM_ToInstall, ext)
+        endif
+      endfor
   endif
-  let g:COCNVIM_ToInstall = []
-  for ext in g:COCNVIM_EXTENSIONS
-    if !isdirectory(coc_extensions_dir . '/' . ext)
-      call add(g:COCNVIM_ToInstall, ext)
-    endif
-  endfor
 
   if !empty(g:COCNVIM_ToInstall)
     call s:ShowDialog('[my-vimrc] coc.nvim is ready. Run the following command to install recommended extensions:' .
