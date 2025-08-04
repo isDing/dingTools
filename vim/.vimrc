@@ -556,7 +556,7 @@ function! CheckBackspace() abort
   return !col || getline('.')[col - 1]  =~# '\s'
 endfunction
 " 悬浮文档（类似 VSCode 的悬停提示），光标在符号上按 K 显示文档信息
-nnoremap <silent> K :call ShowDocumentation()<CR>
+nnoremap <silent> K :call CocActionAsync('doHover')<CR>
 " 跳转到上一个诊断（警告/错误）
 nmap <silent> [g <Plug>(coc-diagnostic-prev)
 " 跳转到下一个诊断（警告/错误）
@@ -590,6 +590,7 @@ xmap <leader>f  <Plug>(coc-format-selected)
 nmap <leader>f  <Plug>(coc-format-selected)
 " 执行当前诊断的修复建议（例如快速修复 import）
 nmap <leader>Cf <Plug>(coc-fix-current)
+" nnoremap <leader>Cf :CocFix<CR>
 " " 选中范围内的代码操作（Code Action）
 " nmap <leader>a  <Plug>(coc-codeaction-selected)
 " xmap <leader>a  <Plug>(coc-codeaction-selected)
