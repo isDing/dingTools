@@ -621,6 +621,12 @@ nnoremap <silent><nowait> <leader>Cs  :<C-u>CocList -I symbols<cr>
 nnoremap <silent><nowait> <leader>Cj  :<C-u>CocNext<CR>
 nnoremap <silent><nowait> <leader>Ck  :<C-u>CocPrev<CR>
 nnoremap <silent><nowait> <leader>Cp  :<C-u>CocListResume<CR>
+" coc-git 状态
+nmap <leader>gs :<C-u>CocList gstatus<CR>
+" coc-git 改动列表
+nmap <leader>gd :<C-u>CocList gchanges<CR>
+" coc-git blame
+nmap <leader>gb :<C-u>CocCommand git.showBlameCR>
 " 安装coc-nvim的扩展插件
 autocmd VimEnter * call s:PostPluginInstall()
 nnoremap <leader>CI :execute 'CocInstall ' . join(g:COCNVIM_ToInstall, ' ')<CR>

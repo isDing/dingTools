@@ -9,8 +9,8 @@ else
     echo "未找到根目录下的 .vimrc 文件，跳过更新。"
 fi
 
-# if [ -d "$HOME/.vim" ]; then
-#     cp -rf $HOME/.vim "./.vim"
-# else
-#     echo "未找到根目录下的 .vim 文件夹，跳过更新。"
-# fi
+if [ -d "$HOME/.vim" ]; then
+    if [ -f "$HOME/.vim/coc-settings.json" ]; then
+        cp $HOME/.vim/coc-settings.json "./coc-settings.json"
+    fi
+fi
