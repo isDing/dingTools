@@ -11,13 +11,13 @@ if ! command -v vim &> /dev/null; then
         echo "无法自动安装 vim，请手动安装。"
         exit 1
     fi
-else
-    echo "vim 已安装，尝试更新到最新版本..."
-    if command -v apt &> /dev/null; then
-        sudo apt install --only-upgrade -y vim
-    elif command -v yum &> /dev/null; then
-        sudo yum update -y vim
-    fi
+# else
+#     echo "vim 已安装，尝试更新到最新版本..."
+#     if command -v apt &> /dev/null; then
+#         sudo apt install --only-upgrade -y vim
+#     elif command -v yum &> /dev/null; then
+#         sudo yum update -y vim
+#     fi
 fi
 # 检查 nodejs 是否安装
 if ! command -v node &> /dev/null; then
