@@ -199,7 +199,7 @@ function! OpenShell()
         call getchar()
         sh
     else
-        bo 10sp | term ++curwin
+        bo 15sp | term ++curwin
 
         " enable the shortcut to close the shell
         if has('win32')
@@ -230,6 +230,7 @@ let mapleader = "\<space>"
 " easier navigation between split windows
 nnoremap <c-j> <c-w>j
 nnoremap <c-k> <c-w>k
+tnoremap <c-k> <c-w>k
 nnoremap <c-h> <c-w>h
 nnoremap <c-l> <c-w>l
 
@@ -278,7 +279,7 @@ nnoremap <leader>h :vertical resize -1<CR>
 nnoremap <leader>l :vertical resize +1<CR>
 
 " 快速消除搜索高亮
-nnoremap <leader>/ :nohl<CR>
+nnoremap <silent> <leader>/ :nohl<CR>
 
 " *************************************************************************
 " plugin manager
@@ -396,6 +397,12 @@ endif
 
 call plug#end()
 
+" coc.nvim 扩展插件
+let g:COCNVIM_EXTENSIONS=[
+\ 'coc-pyright',
+\ 'coc-json',
+\ 'coc-clangd'
+\]
 
 " *************************************************************************
 " plugin configs functions
@@ -419,6 +426,46 @@ function! CocDiagnosticStatus()
     call add(msgs, 'Hint:' . info['hint'])
   endif
   return join(msgs, ' ')
+endfunction
+
+" coc.nvim 需要安装的扩展插件查询
+function! s:PromptCocExtensionInstall() abort
+  let coc_extensions_dir = expand(get(g:, 'coc_data_home', '~/.config/coc') . '/extensions/node_modules')
+  " 检查目录是否存在
+  if !isdirectory(coc_extensions_dir)
+    echoerr 'Coc extensions directory not found: ' . coc_extensions_dir
+    return
+  endif
+  let g:COCNVIM_ToInstall = []
+  for ext in g:COCNVIM_EXTENSIONS
+    if !isdirectory(coc_extensions_dir . '/' . ext)
+      call add(g:COCNVIM_ToInstall, ext)
+    endif
+  endfor
+
+  if !empty(g:COCNVIM_ToInstall)
+    call s:ShowDialog('[my-vimrc] coc.nvim is ready. Run the following command to install recommended extensions:' .
+          \ "\n\n<leader>CI\nOR" .
+          \ "\n:CocInstall " . join(g:COCNVIM_ToInstall, " ") . " \n\nPress ENTER to continue")
+  endif
+endfunction
+
+" coc.nvim 检查是否有未安装的扩展插件
+function! s:PostPluginInstall() abort
+  if isdirectory(expand('~/.vim/plugged/coc.nvim')) || isdirectory(expand('~/.local/share/nvim/plugged/coc.nvim'))
+    if executable('node')
+      " 延迟200毫秒提示用户安装 coc 扩展，避免在启动期间强制执行
+      call timer_start(200, { -> s:PromptCocExtensionInstall() })
+    else
+      echohl WarningMsg
+      echom "[my-vimrc] Node.js not found. Cannot install coc extensions."
+      echohl None
+    endif
+  else
+    echohl WarningMsg
+    echom "[my-vimrc] coc.nvim not installed successfully."
+    echohl None
+  endif
 endfunction
 
 " 设置 cpp 文件的注释风格
@@ -532,7 +579,7 @@ nmap <leader>rn <Plug>(coc-rename)
 xmap <leader>f  <Plug>(coc-format-selected)
 nmap <leader>f  <Plug>(coc-format-selected)
 " 执行当前诊断的修复建议（例如快速修复 import）
-" nmap <leader>qf <Plug>(coc-fix-current)
+nmap <leader>Cf <Plug>(coc-fix-current)
 " " 选中范围内的代码操作（Code Action）
 " nmap <leader>a  <Plug>(coc-codeaction-selected)
 " xmap <leader>a  <Plug>(coc-codeaction-selected)
@@ -563,6 +610,9 @@ nnoremap <silent><nowait> <leader>Cs  :<C-u>CocList -I symbols<cr>
 nnoremap <silent><nowait> <leader>Cj  :<C-u>CocNext<CR>
 nnoremap <silent><nowait> <leader>Ck  :<C-u>CocPrev<CR>
 nnoremap <silent><nowait> <leader>Cp  :<C-u>CocListResume<CR>
+" 安装coc-nvim的扩展插件
+autocmd VimEnter * call s:PostPluginInstall()
+nnoremap <leader>CI :execute 'CocInstall ' . join(g:COCNVIM_ToInstall, ' ')<CR>
 " --------------------------------- coc.nvim end ---------------------------------------
 
 " flazz/vim-colorschemes
