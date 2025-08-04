@@ -50,10 +50,10 @@ else
     echo "未找到当前目录下的 .vimrc 文件，跳过复制。"
 fi
 
-if ![ -d "$HOME/.vim" ]; then
+if ! [ -d "$HOME/.vim" ]; then
     mkdir "$HOME/.vim"
 fi
-if [-f "coc-settings.json" ]; then
+if [ -f "coc-settings.json" ]; then
     cp coc-settings.json "$HOME/.vim/coc-settings.json"
 fi
 
