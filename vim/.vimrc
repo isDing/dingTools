@@ -245,7 +245,7 @@ nnoremap <leader>vs :wa<Bar>so $MYVIMRC<CR>
 nnoremap <leader>p :set paste!<CR>
 
 " toggle list char, 打开、关闭可视化符号
-nnoremap <leader>l :set list!<CR>
+nnoremap <leader>L :set list!<CR>
 
 " toggle tab/spaces, 制表符和空格之间的切换
 nnoremap <leader>t :call TabToggle()<CR>
@@ -277,6 +277,8 @@ nnoremap <leader>j :resize -1<CR>
 nnoremap <leader>h :vertical resize -1<CR>
 nnoremap <leader>l :vertical resize +1<CR>
 
+" 快速消除搜索高亮
+nnoremap <leader>/ :nohl<CR>
 
 " *************************************************************************
 " plugin manager
