@@ -61,3 +61,5 @@ chmod 755 /data/local/tmp/autoClickForXunShan.sh
 ```sh
 cat /data/local/tmp/xunshan.log
 ```
+
+# [Fake Location 下载页](https://github.com/Lerist/FakeLocation/releases)

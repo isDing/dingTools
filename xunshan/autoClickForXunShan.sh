@@ -91,6 +91,64 @@ tap_by_text() {
     return 0
 }
 
+# 判断 resource-id 是否存在（可重试）
+verify_id() {
+    _id="$1"
+    _retries="${2:-2}"
+    _i=0
+    while [ $_i -lt $_retries ]; do
+        uiautomator dump /data/local/tmp/ui.xml 2>/dev/null
+        # 使用固定字符串匹配，避免正则特殊字符影响
+        grep -qF "resource-id=\"$_id\"" /data/local/tmp/ui.xml 2>/dev/null && return 0
+        _i=$((_i + 1))
+        sleep 2
+    done
+    return 1
+}
+
+# 通过 resource-id 点击（从 ui.xml 解析 bounds 坐标）
+tap_by_id() {
+    _id="$1"
+
+    # 确保 ui.xml 最新
+    uiautomator dump /data/local/tmp/ui.xml 2>/dev/null
+
+    # 精准提取包含该 resource-id 的 <node ...> 起始标签（单行XML也可用）
+    # 说明：<node[^>]*resource-id="..."[^>]*> 会截取到下一个 '>' 为止，恰为起始标签
+    _node=$(grep -o "<node[^>]*resource-id=\"$_id\"[^>]*>" /data/local/tmp/ui.xml | head -1)
+    if [ -z "$_node" ]; then
+        log "ERROR: 未找到 resource-id $_id"
+        return 1
+    fi
+
+    # 从起始标签中提取 bounds
+    _bounds=$(echo "$_node" | sed -n 's/.*bounds="\([^"]*\)".*/\1/p')
+    if [ -z "$_bounds" ]; then
+        log "ERROR: 未在节点中找到 bounds (resource-id: $_id)"
+        return 1
+    fi
+
+    # 校验坐标格式并解析为四元组
+    if ! echo "$_bounds" | grep -qE '^\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]$'; then
+        log "ERROR: bounds 格式非法: $_bounds (resource-id: $_id)"
+        return 1
+    fi
+
+    _coords=$(echo "$_bounds" | sed 's/\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]/\1 \2 \3 \4/')
+    _x1=$(echo $_coords | awk '{print $1}')
+    _y1=$(echo $_coords | awk '{print $2}')
+    _x2=$(echo $_coords | awk '{print $3}')
+    _y2=$(echo $_coords | awk '{print $4}')
+
+    # 计算中心点
+    _center_x=$(((_x1 + _x2) / 2))
+    _center_y=$(((_y1 + _y2) / 2))
+
+    log "点击 resource-id '$_id' 坐标: [$_x1,$_y1][$_x2,$_y2] 中心点 ($_center_x, $_center_y)"
+    input tap $_center_x $_center_y
+    return 0
+}
+
 # QQ 消息发送（通用函数）
 send_qq_message_internal() {
     _msg_type="$1"  # Error 或 Notice
@@ -240,6 +298,7 @@ check_first_record_date_today_or_notify() {
         log "WARN: 第一条记录日期($_date_part) != 今天($_today)"
         # 仅提醒，不退出
         send_qq_notice "First_Record_Not_Today_$_date_part"
+        return 1
     else
         log "第一条记录日期为今天: $_today"
         send_qq_notice "The task has been completed today!"
@@ -269,11 +328,16 @@ run_patrol() {
     input tap 692 1820
     sleep 1
     input tap 500 1600
-    sleep 4
+    sleep 6
 
     # 下拉刷新
     input swipe 500 300 500 1200 200
     sleep 2
+
+    # 盲判断升级弹窗出现时，开始巡护按钮会被遮挡?
+    if ! verify_id "cn.piesat.hnly.fcs:id/btn_patrol"; then
+        send_qq_error "The start patrol button is blocked."
+    fi
 
     # 检查是否有待上传数据
     check_pending_upload
@@ -305,7 +369,9 @@ run_patrol() {
     tap_by_text "我的巡护记录"
     sleep 2
     # 校验第一条记录日期是否为今天（不符合仅提醒，不退出）
-    check_first_record_date_today_or_notify
+    if check_first_record_date_today_or_notify; then
+        return 1
+    fi
 
     # 返回并锁屏
     input keyevent KEYCODE_BACK
