@@ -2,11 +2,11 @@
 
 ################################################################################
 # 自动巡护脚本
-# 功能：每天13点触发巡护任务（随机延迟0-60分钟）
+# 功能：每天10点后开始检测是否已执行，当天未执行则随机延迟0-60分钟后执行一次
 ################################################################################
 
-LOG_FILE="/data/local/tmp/auto.log"
-STATE_FILE="/data/local/tmp/auto_patrol_state"
+LOG_FILE="/data/local/tmp/xunshan.log"
+STATE_FILE="/data/local/tmp/auto_xunshan_state"
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
@@ -171,7 +171,7 @@ start_fake_location() {
     input tap 282 826   # 选择位置
     sleep 1
     input tap 190 1111  # 开始模拟
-    sleep 4
+    sleep 6
 
     # 验证启动
     verify_ui "停止模拟" 2 || send_qq_error "FakeLocation_Start_Failed"
@@ -337,13 +337,13 @@ main() {
     while true; do
         _hour=$(date +%H)
 
-        # 检查是否在13点时段
-        if [ "$_hour" -eq 13 ]; then
+        # 简化策略：从大于10点开始检测，若当日未执行，则随机延迟150-1950秒后执行一次
+        if [ "$_hour" -gt 10 ]; then
             if ! has_triggered_today; then
                 log "触发时间到达，准备执行"
 
-                # 随机延迟 0-3600 秒
-                _delay=$((RANDOM % 3600))
+                # 随机延迟 150-1950 秒
+                _delay=$((RANDOM % 1800 + 150))
                 log "随机延迟 $_delay 秒"
                 sleep $_delay
 
