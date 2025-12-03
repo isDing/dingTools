@@ -2,7 +2,7 @@
 
 ################################################################################
 # 自动巡护脚本
-# 功能：每天10点后开始检测是否已执行，当天未执行则随机延迟0-60分钟后执行一次
+# 功能：每天11点后开始检测是否已执行，当天未执行则随机延迟150-1950秒后执行一次
 ################################################################################
 
 LOG_FILE="/data/local/tmp/xunshan.log"
@@ -10,6 +10,21 @@ STATE_FILE="/data/local/tmp/auto_xunshan_state"
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
+}
+
+# 计算并返回“当前时间 + 指定秒数”的目标时间字符串
+# 优先使用支持 -d 的 date；无法格式化时回退输出 epoch 值
+target_time_str() {
+    _sec="$1"
+    _now=$(date +%s)
+    _target=$((_now + _sec))
+    if date -d "@$_target" "+%Y-%m-%d %H:%M:%S" >/dev/null 2>&1; then
+        date -d "@$_target" "+%Y-%m-%d %H:%M:%S"
+    elif command -v busybox >/dev/null 2>&1; then
+        busybox date -D %s -d "$_target" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "epoch=$_target"
+    else
+        echo "epoch=$_target"
+    fi
 }
 
 # 返回桌面
@@ -168,9 +183,21 @@ send_qq_message_internal() {
     input tap 480 2200  # 输入框
     sleep 1
 
-    # 移除非ASCII字符，避免 input text 报错
-    _msg=$(echo "$_msg_content" | sed 's/[^a-zA-Z0-9_\-\.]//g')
-    input text "AutoScript_${_msg_type}:$_msg"
+    # 规范化文本：
+    # - 保留可见ASCII（0x20-0x7E），将其它字符替换为'?'，避免 input text 报错
+    # - 将空格替换为 %s，确保空格正确输入
+    # 仅保留安全字符集：字母/数字/空格/下划线/横杠/点/逗号/冒号，其他替换为'?'
+    _msg_norm=$(echo "$_msg_content" | sed -e 's/[^-a-zA-Z0-9 _\.,:!]/?/g')
+    _msg_encoded=$(echo "$_msg_norm" | sed -e 's/ /%s/g')
+
+    _type_line="AutoScript ${_msg_type}:"
+    _type_encoded=$(echo "$_type_line" | sed -e 's/[^ -~]/?/g' -e 's/ /%s/g')
+
+    # 先输入类型行，然后换行，再输入内容行，最后点击发送
+    input text "$_type_encoded"
+    input keyevent KEYCODE_ENTER
+    sleep 0.5
+    input text "$_msg_encoded"
     sleep 1
     input tap 970 895  # 发送
     sleep 2
@@ -193,6 +220,7 @@ send_qq_error() {
     log "ERROR: $1"
     send_qq_message_internal "Error" "$1"
     log "脚本退出"
+    input keyevent KEYCODE_SLEEP
     exit 1
 }
 
@@ -221,7 +249,7 @@ start_fake_location() {
         log "检测到更新弹窗，点击暂不更新"
         tap_by_text "暂不更新"
         sleep 1
-        send_qq_notice "FakeLocation_Update_Available"
+        send_qq_notice "FakeLocation update available."
     fi
 
     input tap 85 185    # 菜单
@@ -232,7 +260,7 @@ start_fake_location() {
     sleep 6
 
     # 验证启动
-    verify_ui "停止模拟" 2 || send_qq_error "FakeLocation_Start_Failed"
+    verify_ui "停止模拟" 2 || send_qq_error "FakeLocation start failed."
 
     log "Fake Location 启动成功"
     input tap 500 900
@@ -262,7 +290,7 @@ check_pending_upload() {
             sleep 2
 
             if verify_ui "待上传" 1; then
-                send_qq_error "Data_Upload_Pending_After_40Min"
+                send_qq_error "Data upload pending after 40Min."
             fi
 
             log "第三次检查通过，待上传数据已清除"
@@ -275,7 +303,9 @@ check_pending_upload() {
 }
 
 # 检查“我的巡护记录”列表中第一条记录日期是否为今天
-# 不满足则通过 QQ 发送提醒，但不退出脚本
+# 优化：
+# - 如果为今天：返回成功，后续继续执行清理操作
+# - 如果未找到记录节点或第一条记录不为今天：直接退出程序（不做现场清理）
 check_first_record_date_today_or_notify() {
     log "检查巡护记录第一条日期"
 
@@ -285,9 +315,9 @@ check_first_record_date_today_or_notify() {
     # 从第一个日期节点提取文本（形如 2025-12-02 13:25:32）
     _line=$(grep -o 'text="[^\"]*"[^>]*resource-id="cn.piesat.hnly.fcs:id/tv_date"' /data/local/tmp/ui.xml | head -1)
     if [ -z "$_line" ]; then
-        log "WARN: 未找到记录日期节点 tv_date"
-        send_qq_notice "Record_Date_NotFound"
-        return 1
+        log "ERROR: 未找到记录日期节点 tv_date"
+        # 直接退出（不做现场清理）
+        send_qq_error "Record date not found"
     fi
 
     _full_datetime=$(echo "$_line" | sed 's/.*text="\([^"]*\)".*/\1/')
@@ -295,10 +325,9 @@ check_first_record_date_today_or_notify() {
     _today=$(date '+%Y-%m-%d')
 
     if [ "$_date_part" != "$_today" ]; then
-        log "WARN: 第一条记录日期($_date_part) != 今天($_today)"
-        # 仅提醒，不退出
-        send_qq_notice "First_Record_Not_Today_$_date_part"
-        return 1
+        log "ERROR: 第一条记录日期($_date_part) != 今天($_today)"
+        # 直接退出（不做现场清理）
+        send_qq_error "First record not today: $_date_part"
     else
         log "第一条记录日期为今天: $_today"
         send_qq_notice "The task has been completed today!"
@@ -349,7 +378,7 @@ run_patrol() {
 
     # 随机巡护时长：70-90分钟
     _duration=$((RANDOM % 1200 + 4200))
-    log "巡护 $_duration 秒 ($((_duration/60)) 分钟)"
+    log "巡护 $_duration 秒 ($((_duration/60)) 分钟)，目标结束时间: $(target_time_str $_duration)"
     sleep $_duration
 
     # 结束巡护
@@ -368,10 +397,8 @@ run_patrol() {
     # 检查结果
     tap_by_text "我的巡护记录"
     sleep 2
-    # 校验第一条记录日期是否为今天（不符合仅提醒，不退出）
-    if check_first_record_date_today_or_notify; then
-        return 1
-    fi
+    # 校验第一条记录日期是否为今天；若检查失败会在函数内直接退出；成功则继续执行清理
+    check_first_record_date_today_or_notify
 
     # 返回并锁屏
     input keyevent KEYCODE_BACK
@@ -403,14 +430,14 @@ main() {
     while true; do
         _hour=$(date +%H)
 
-        # 简化策略：从大于10点开始检测，若当日未执行，则随机延迟150-1950秒后执行一次
-        if [ "$_hour" -gt 10 ]; then
+        # 简化策略：从大于11点开始检测，若当日未执行，则随机延迟150-1950秒后执行一次
+        if [ "$_hour" -ge 11 ]; then
             if ! has_triggered_today; then
                 log "触发时间到达，准备执行"
 
                 # 随机延迟 150-1950 秒
                 _delay=$((RANDOM % 1800 + 150))
-                log "随机延迟 $_delay 秒"
+                log "随机延迟 $_delay 秒，目标执行时间: $(target_time_str $_delay)"
                 sleep $_delay
 
                 # 执行巡护（失败会自动退出）
