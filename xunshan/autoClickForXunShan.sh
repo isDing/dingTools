@@ -183,22 +183,29 @@ send_qq_message_internal() {
     input tap 480 2200  # 输入框
     sleep 1
 
-    # 规范化文本：
-    # - 保留可见ASCII（0x20-0x7E），将其它字符替换为'?'，避免 input text 报错
-    # - 将空格替换为 %s，确保空格正确输入
-    # 仅保留安全字符集：字母/数字/空格/下划线/横杠/点/逗号/冒号，其他替换为'?'
-    _msg_norm=$(echo "$_msg_content" | sed -e 's/[^-a-zA-Z0-9 _\.,:!]/?/g')
-    _msg_encoded=$(echo "$_msg_norm" | sed -e 's/ /%s/g')
-
+    # 组装类型行
     _type_line="AutoScript ${_msg_type}:"
     _type_encoded=$(echo "$_type_line" | sed -e 's/[^ -~]/?/g' -e 's/ /%s/g')
 
-    # 先输入类型行，然后换行，再输入内容行，最后点击发送
+    # 展开字面量 "\n" 为实际换行，并逐行输入内容
+    _msg_expanded=$(printf "%s" "$_msg_content" | awk '{gsub(/\\n/,"\n"); printf "%s", $0}')
+
+    # 输入类型行并换行
     input text "$_type_encoded"
     input keyevent KEYCODE_ENTER
+    sleep 0.3
+
+    # 按行输入内容，每行后发送一次 ENTER 形成换行
+    printf "%s" "$_msg_expanded" | while IFS= read -r _line || [ -n "$_line" ]; do
+        _line_norm=$(printf "%s" "$_line" | sed -e 's/[^-a-zA-Z0-9 _\.,:!()]/?/g')
+        _line_encoded=$(printf "%s" "$_line_norm" | sed -e 's/ /%s/g')
+        if [ -n "$_line_encoded" ]; then
+            input text "$_line_encoded"
+        fi
+        input keyevent KEYCODE_ENTER
+        sleep 0.3
+    done
     sleep 0.5
-    input text "$_msg_encoded"
-    sleep 1
     input tap 970 895  # 发送
     sleep 2
 
@@ -338,6 +345,7 @@ check_first_record_date_today_or_notify() {
 
 # 执行巡护流程
 run_patrol() {
+    _duration="$1"
     log "======== 开始巡护 ========"
 
     # 亮屏
@@ -346,11 +354,7 @@ run_patrol() {
 
     # 启动 Fake Location
     start_fake_location
-
-    # 开始时提示
-    send_qq_notice "begin task!"
-    home
-    sleep 10
+    sleep 2
 
     # 打开巡护应用
     log "打开巡护应用"
@@ -376,8 +380,7 @@ run_patrol() {
     input tap 550 550
     sleep 2
 
-    # 随机巡护时长：70-90分钟
-    _duration=$((RANDOM % 1200 + 4200))
+    # 巡护时长：由 main 传入（单位：秒）
     log "巡护 $_duration 秒 ($((_duration/60)) 分钟)，目标结束时间: $(target_time_str $_duration)"
     sleep $_duration
 
@@ -437,11 +440,30 @@ main() {
 
                 # 随机延迟 150-1950 秒
                 _delay=$((RANDOM % 1800 + 150))
-                log "随机延迟 $_delay 秒，目标执行时间: $(target_time_str $_delay)"
+
+                # 在 main 中定义本次巡护时长（70-90 分钟随机，单位：秒）
+                _duration=$((RANDOM % 1200 + 4200))
+
+                # 计算开始/结束时间：
+                # - 开始时间 = 当前时间 + 随机延时（目标执行时间）
+                # - 结束时间 = 开始时间 + 持续时长
+                _start_ts_str=$(target_time_str $_delay)
+                _end_ts_str=$(target_time_str $((_delay + _duration)))
+                _dur_min=$((_duration/60))
+
+                # 在执行巡护前发送 QQ 通知：开始时间、结束时间、持续时间
+                input keyevent KEYCODE_WAKEUP
+                home
+                send_qq_notice "------\nToday task:\nStart:${_start_ts_str}\nEnd:${_end_ts_str}\nDuration:${_duration}s (${_dur_min}min)"
+                home
+                input keyevent KEYCODE_SLEEP
+
+                # 发送通知后再进行随机延时
+                log "随机延迟 $_delay 秒，目标执行时间: ${_start_ts_str}"
                 sleep $_delay
 
                 # 执行巡护（失败会自动退出）
-                run_patrol
+                run_patrol "$_duration"
                 log "巡护成功"
                 mark_triggered
             fi
