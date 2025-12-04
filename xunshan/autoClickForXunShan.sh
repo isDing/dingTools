@@ -309,37 +309,53 @@ check_pending_upload() {
     fi
 }
 
-# 检查“我的巡护记录”列表中第一条记录日期是否为今天
-# 优化：
-# - 如果为今天：返回成功，后续继续执行清理操作
-# - 如果未找到记录节点或第一条记录不为今天：直接退出程序（不做现场清理）
+# 重新定义：检查第一条记录是否为“今天且有效(无 iv_valid)”
 check_first_record_date_today_or_notify() {
-    log "检查巡护记录第一条日期"
-
-    # 导出当前界面到 ui.xml
+    log "检查巡护记录第一条日期与有效性"
+    # 导出 XML 并按标签断行
     uiautomator dump /data/local/tmp/ui.xml 2>/dev/null
+    sed 's/></>\n</g' /data/local/tmp/ui.xml > /data/local/tmp/ui_lines.txt
 
-    # 从第一个日期节点提取文本（形如 2025-12-02 13:25:32）
-    _line=$(grep -o 'text="[^\"]*"[^>]*resource-id="cn.piesat.hnly.fcs:id/tv_date"' /data/local/tmp/ui.xml | head -1)
-    if [ -z "$_line" ]; then
-        log "ERROR: 未找到记录日期节点 tv_date"
-        # 直接退出（不做现场清理）
-        send_qq_error "Record date not found"
+    # 定位列表容器
+    _rv_line=$(grep -n 'resource-id="cn.piesat.hnly.fcs:id/recyclerView"' /data/local/tmp/ui_lines.txt | head -1 | cut -d: -f1)
+    if [ -z "$_rv_line" ]; then
+        log "ERROR: 未找到 recyclerView 容器"
+        send_qq_error "validity check: RecyclerView not found."
     fi
 
-    _full_datetime=$(echo "$_line" | sed 's/.*text="\([^"]*\)".*/\1/')
+    # 找到容器后的第一条 tv_date（即第一条记录）
+    _date_line_no=$(awk -v s="$_rv_line" 'NR>s && /resource-id="cn.piesat.hnly.fcs:id\/tv_date"/ {print NR; exit}' /data/local/tmp/ui_lines.txt)
+    if [ -z "$_date_line_no" ]; then
+        log "ERROR: 未找到第一条记录日期(tv_date)"
+        send_qq_error "validity check: First record date not found."
+    fi
+
+    _date_line=$(sed -n "${_date_line_no}p" /data/local/tmp/ui_lines.txt)
+    _full_datetime=$(echo "$_date_line" | sed -n 's/.*text="\([^"]*\)".*/\1/p')
     _date_part=$(echo "$_full_datetime" | awk '{print $1}')
     _today=$(date '+%Y-%m-%d')
-
-    if [ "$_date_part" != "$_today" ]; then
-        log "ERROR: 第一条记录日期($_date_part) != 今天($_today)"
-        # 直接退出（不做现场清理）
-        send_qq_error "First record not today: $_date_part"
-    else
-        log "第一条记录日期为今天: $_today"
-        send_qq_notice "The task has been completed today!"
+    if [ -z "$_full_datetime" ]; then
+        log "ERROR: 第一条记录日期文本缺失"
+        send_qq_error "validity check: First record date text missing."
     fi
 
+    # 先判定日期是否为今天，不符合直接错误退出
+    if [ "$_date_part" != "$_today" ]; then
+        log "ERROR: 第一条记录日期($_date_part) != 今天($_today)"
+        send_qq_error "validity check: The first record is $_date_part not today. Please try again!"
+    fi
+
+    # 再检查是否存在 iv_valid 无效图标
+    _start=$((_date_line_no - 12)); [ $_start -lt 1 ] && _start=1
+    _end=$((_date_line_no + 12))
+    if sed -n "${_start},${_end}p" /data/local/tmp/ui_lines.txt | grep -q 'resource-id="cn.piesat.hnly.fcs:id/iv_valid"'; then
+        log "ERROR: 第一条记录存在 iv_valid 无效标识"
+        send_qq_error "validity check: The first record invalid! Please try again!"
+    fi
+
+    # 到这里表示为“今天且有效”
+    log "第一条记录为今天且无无效图标: $_full_datetime"
+    send_qq_notice "The task has been completed today!\nDate:${_full_datetime}"
     return 0
 }
 
