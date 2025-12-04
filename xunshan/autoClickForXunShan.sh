@@ -5,8 +5,13 @@
 # 功能：每天11点后开始检测是否已执行，当天未执行则随机延迟150-1950秒后执行一次
 ################################################################################
 
-LOG_FILE="/data/local/tmp/xunshan.log"
-STATE_FILE="/data/local/tmp/auto_xunshan_state"
+ROOT_DIR="/data/local/tmp/xunshan"
+LOG_FILE="$ROOT_DIR/xunshan.log"
+STATE_FILE="$ROOT_DIR/auto_xunshan_state"
+UI_XML="$ROOT_DIR/ui.xml"
+UI_LINES="$ROOT_DIR/ui_lines.txt"
+
+mkdir -p "$ROOT_DIR"
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
@@ -58,8 +63,8 @@ verify_ui() {
     _retries="${2:-2}"
     _i=0
     while [ $_i -lt $_retries ]; do
-        uiautomator dump /data/local/tmp/ui.xml 2>/dev/null
-        grep -q "$_text" /data/local/tmp/ui.xml 2>/dev/null && return 0
+        uiautomator dump "$UI_XML" 2>/dev/null
+        grep -q "$_text" "$UI_XML" 2>/dev/null && return 0
         _i=$((_i + 1))
         sleep 2
     done
@@ -71,11 +76,11 @@ tap_by_text() {
     _text="$1"
 
     # 确保ui.xml是最新的
-    uiautomator dump /data/local/tmp/ui.xml 2>/dev/null
+    uiautomator dump "$UI_XML" 2>/dev/null
 
     # 提取包含指定文本的完整节点，然后获取bounds
     # 使用 grep -o 提取 text="xxx"...bounds="[...]" 的完整模式
-    _node=$(grep -o "text=\"$_text\"[^>]*" /data/local/tmp/ui.xml | head -1)
+    _node=$(grep -o "text=\"$_text\"[^>]*" "$UI_XML" | head -1)
 
     if [ -z "$_node" ]; then
         log "ERROR: 未找到按钮文本 $_text"
@@ -112,9 +117,9 @@ verify_id() {
     _retries="${2:-2}"
     _i=0
     while [ $_i -lt $_retries ]; do
-        uiautomator dump /data/local/tmp/ui.xml 2>/dev/null
+        uiautomator dump "$UI_XML" 2>/dev/null
         # 使用固定字符串匹配，避免正则特殊字符影响
-        grep -qF "resource-id=\"$_id\"" /data/local/tmp/ui.xml 2>/dev/null && return 0
+        grep -qF "resource-id=\"$_id\"" "$UI_XML" 2>/dev/null && return 0
         _i=$((_i + 1))
         sleep 2
     done
@@ -126,11 +131,11 @@ tap_by_id() {
     _id="$1"
 
     # 确保 ui.xml 最新
-    uiautomator dump /data/local/tmp/ui.xml 2>/dev/null
+    uiautomator dump "$UI_XML" 2>/dev/null
 
     # 精准提取包含该 resource-id 的 <node ...> 起始标签（单行XML也可用）
     # 说明：<node[^>]*resource-id="..."[^>]*> 会截取到下一个 '>' 为止，恰为起始标签
-    _node=$(grep -o "<node[^>]*resource-id=\"$_id\"[^>]*>" /data/local/tmp/ui.xml | head -1)
+    _node=$(grep -o "<node[^>]*resource-id=\"$_id\"[^>]*>" "$UI_XML" | head -1)
     if [ -z "$_node" ]; then
         log "ERROR: 未找到 resource-id $_id"
         return 1
@@ -313,24 +318,24 @@ check_pending_upload() {
 check_first_record_date_today_or_notify() {
     log "检查巡护记录第一条日期与有效性"
     # 导出 XML 并按标签断行
-    uiautomator dump /data/local/tmp/ui.xml 2>/dev/null
-    sed 's/></>\n</g' /data/local/tmp/ui.xml > /data/local/tmp/ui_lines.txt
+    uiautomator dump "$UI_XML" 2>/dev/null
+    sed 's/></>\n</g' "$UI_XML" > "$UI_LINES"
 
     # 定位列表容器
-    _rv_line=$(grep -n 'resource-id="cn.piesat.hnly.fcs:id/recyclerView"' /data/local/tmp/ui_lines.txt | head -1 | cut -d: -f1)
+    _rv_line=$(grep -n 'resource-id="cn.piesat.hnly.fcs:id/recyclerView"' "$UI_LINES" | head -1 | cut -d: -f1)
     if [ -z "$_rv_line" ]; then
         log "ERROR: 未找到 recyclerView 容器"
         send_qq_error "validity check: RecyclerView not found."
     fi
 
     # 找到容器后的第一条 tv_date（即第一条记录）
-    _date_line_no=$(awk -v s="$_rv_line" 'NR>s && /resource-id="cn.piesat.hnly.fcs:id\/tv_date"/ {print NR; exit}' /data/local/tmp/ui_lines.txt)
+    _date_line_no=$(awk -v s="$_rv_line" 'NR>s && /resource-id="cn.piesat.hnly.fcs:id\/tv_date"/ {print NR; exit}' "$UI_LINES")
     if [ -z "$_date_line_no" ]; then
         log "ERROR: 未找到第一条记录日期(tv_date)"
         send_qq_error "validity check: First record date not found."
     fi
 
-    _date_line=$(sed -n "${_date_line_no}p" /data/local/tmp/ui_lines.txt)
+    _date_line=$(sed -n "${_date_line_no}p" "$UI_LINES")
     _full_datetime=$(echo "$_date_line" | sed -n 's/.*text="\([^"]*\)".*/\1/p')
     _date_part=$(echo "$_full_datetime" | awk '{print $1}')
     _today=$(date '+%Y-%m-%d')
@@ -348,7 +353,7 @@ check_first_record_date_today_or_notify() {
     # 再检查是否存在 iv_valid 无效图标
     _start=$((_date_line_no - 12)); [ $_start -lt 1 ] && _start=1
     _end=$((_date_line_no + 12))
-    if sed -n "${_start},${_end}p" /data/local/tmp/ui_lines.txt | grep -q 'resource-id="cn.piesat.hnly.fcs:id/iv_valid"'; then
+    if sed -n "${_start},${_end}p" "$UI_LINES" | grep -q 'resource-id="cn.piesat.hnly.fcs:id/iv_valid"'; then
         log "ERROR: 第一条记录存在 iv_valid 无效标识"
         send_qq_error "validity check: The first record invalid! Please try again!"
     fi

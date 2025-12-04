@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>XunShan 管理面板</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 16px; }
+    h1 { font-size: 18px; margin: 8px 0; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    button { padding: 8px 12px; }
+    .status { font-weight: bold; }
+    textarea { width: 100%; height: 50vh; font-family: monospace; white-space: pre; }
+    .small { color: #666; font-size: 12px; }
+  </style>
+  <script defer src="/app.js"></script>
+  <script>
+    // 兼容相对路径
+  </script>
+  <link rel="icon" href="data:," />
+</head>
+<body>
+  <h1>XunShan 管理面板</h1>
+  <div class="row">
+    <div>脚本状态：</div>
+    <div id="status" class="status">加载中...</div>
+    <button id="btn-refresh">刷新状态/日志</button>
+    <button id="btn-start" disabled>后台启动脚本</button>
+  </div>
+  <div class="small" style="margin:6px 0">日志文件：/data/local/tmp/xunshan/xunshan.log</div>
+  <textarea id="log" readonly>加载中...</textarea>
+</body>
+</html>
