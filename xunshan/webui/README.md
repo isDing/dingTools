@@ -1,41 +1,55 @@
 # XunShan WebUI (本地轻量管理面板)
 
-目的：无需安装原生 APP，通过浏览器访问 http://127.0.0.1:8080 在手机上查看 `/data/local/tmp/xunshan/` 下的日志，并检测/启动 `autoClickForXunShan.sh` 脚本。
+目的：无需安装原生 APP，通过浏览器访问 http://127.0.0.1:8080 在手机上查看 `/data/local/tmp/xunshan/` 下的日志，并管理 `autoClickForXunShan.sh` 脚本。
 
-前置条件
-- 设备已 root（脚本与日志路径位于 `/data/local/tmp`）
-- 已安装 BusyBox（Magisk 可开启 BusyBox 模块）
+## 前置条件
+- 设备已 root（脚本与日志路径位于 `/data/local/tmp/xunshan/`）
+- 已安装 BusyBox（如果设备上没有，部署脚本会自动推送）
 
-部署步骤（在手机上执行）
-1) 将本目录拷贝到手机：`/data/local/tmp/xunshan/webui`
-   - 目录结构：
-     - `/data/local/tmp/xunshan/webui/index.html`
-     - `/data/local/tmp/xunshan/webui/app.js`
-     - `/data/local/tmp/xunshan/webui/cgi-bin/status.sh`
-     - `/data/local/tmp/xunshan/webui/cgi-bin/log.sh`
-     - `/data/local/tmp/xunshan/webui/cgi-bin/start.sh`
-2) 赋予 CGI 可执行权限：
-   ```sh
-   su -c 'chmod +x /data/local/tmp/xunshan/webui/cgi-bin/*.sh'
-   ```
-3) 启动 httpd：
-   ```sh
-   su -c 'mkdir -p /data/local/tmp/xunshan/webui && busybox httpd -f -p 127.0.0.1:8080 -h /data/local/tmp/xunshan/webui'
-   ```
-4) 在手机浏览器访问：`http://127.0.0.1:8080`
+## 快速部署
 
-功能说明
-- 状态检测：`/cgi-bin/status.sh`
-- 查看日志：`/cgi-bin/log.sh`（默认尾部 300 行，文件：`/data/local/tmp/xunshan/xunshan.log`）
-- 启动脚本：`/cgi-bin/start.sh`（后台启动，输出到 `/data/local/tmp/xunshan/autoClickForXunShan.out`）
+在电脑上通过 ADB 部署（推荐）：
 
-可选项
-- 如需查看其他日志，可在浏览器地址栏访问：
-  - `http://127.0.0.1:8080/cgi-bin/log.sh?file=/data/local/tmp/xunshan/xxx.log`
-  - 出于安全，仅允许 `/data/local/tmp/xunshan/` 前缀
+```bash
+bash xunshan/webui/deploy_via_adb.sh
+```
 
-注意事项
+部署脚本会自动完成：
+1. 检测并推送 BusyBox（如果需要）
+2. 推送所有 WebUI 文件到 `/data/local/tmp/xunshan/webui`
+3. 设置 CGI 脚本执行权限
+
+## 启动 WebUI 服务（或使用开机自启）
+
+部署完成后，在设备上启动 httpd：
+
+```sh
+# 通过 ADB 启动
+adb shell "su -c 'cd /data/local/tmp/xunshan/webui && /data/local/tmp/busybox httpd -p 127.0.0.1:8080 &'"
+
+# 或在设备终端中启动
+su -c 'cd /data/local/tmp/xunshan/webui && /data/local/tmp/busybox httpd -p 127.0.0.1:8080 &'
+```
+
+## 访问 WebUI
+
+在手机浏览器打开：`http://127.0.0.1:8080`
+
+## 功能说明
+
+- ✅ **查看脚本状态**：实时显示脚本运行状态和 PID
+- ✅ **启动脚本**：一键后台启动 autoClickForXunShan.sh
+- ✅ **停止脚本**：一键停止运行中的脚本
+- ✅ **查看日志**：实时查看最近 300 行日志
+- ✅ **清空日志**：清空日志文件（需确认）
+- ✅ **自动刷新**：每 10 秒自动更新状态和日志
+
+## 开机自启
+
+参考 [xunshan/README.md](../README.md) 中的 Magisk service.d 配置说明。
+
+## 注意事项
+
 - httpd 仅监听本机：`127.0.0.1:8080`，外部不可访问
-- 若你的 BusyBox httpd 未启 CGI 功能，请另行安装支持 CGI 的 BusyBox 版本
-- 若 `ps` 字段顺序异常，可按设备具体输出调整脚本中的 `awk '{print $2}'`
-- 如果脚本路径不同，修改 `start.sh` 中的 `ROOT_DIR`
+- 所有脚本操作均需要 root 权限
+- 日志文件路径：`/data/local/tmp/xunshan/xunshan.log`
