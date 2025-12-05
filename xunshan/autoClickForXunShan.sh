@@ -467,9 +467,9 @@ mark_triggered() {
 
 # 主循环
 main() {
-    log "==== 脚本启动 ===="
+    log "==== 脚本启动2 ===="
 
-    sleep 5
+    sleep 120
 
     while true; do
         _hour=$(date +%H)
