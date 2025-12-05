@@ -28,7 +28,7 @@
     .tab-content.active { display: block; }
     .editor-toolbar { margin: 6px 0; display: flex; justify-content: space-between; align-items: center; }
   </style>
-  <script defer src="/app.js?v=6"></script>
+  <script defer src="/app.js?v=7"></script>
   <script>
     // 兼容相对路径
   </script>
@@ -48,27 +48,43 @@
   <div class="tabs">
     <button class="tab active" data-tab="log">日志查看</button>
     <button class="tab" data-tab="editor">脚本编辑</button>
+    <button class="tab" data-tab="state">完成标志编辑</button>
   </div>
 
   <!-- 日志查看标签页 -->
   <div id="tab-log" class="tab-content active">
     <div class="small" style="margin:6px 0; display: flex; justify-content: space-between; align-items: center;">
-      <span>日志文件：/data/local/tmp/xunshan/xunshan.log（倒序显示，最新在最上）</span>
+      <span>日志文件：<br>/data/local/tmp/xunshan/xunshan.log（倒序显示，最新在最上）</span>
       <button id="btn-clear-log" class="btn-clear">清空日志</button>
     </div>
-    <textarea id="log" readonly>加载中...</textarea>
+    <textarea id="log" readonly style="width: 100%; height: 60vh;">加载中...</textarea>
   </div>
 
   <!-- 脚本编辑标签页 -->
   <div id="tab-editor" class="tab-content">
     <div class="editor-toolbar">
-      <span class="small">脚本文件：/data/local/tmp/xunshan/autoClickForXunShan.sh</span>
+      <span class="small">脚本文件：<br>/data/local/tmp/xunshan/autoClickForXunShan.sh</span>
       <div>
         <button id="btn-save-script" class="btn-save">保存脚本</button>
         <button id="btn-reload-script" class="btn-cancel">重新加载</button>
       </div>
     </div>
-    <textarea id="script-editor" placeholder="加载中..."></textarea>
+    <textarea id="script-editor" style="width: 100%; height: 58vh;" placeholder="加载中..."></textarea>
+  </div>
+
+  <!-- 完成标志编辑标签页 -->
+  <div id="tab-state" class="tab-content">
+    <div class="editor-toolbar">
+      <span class="small">完成标志文件：<br>/data/local/tmp/xunshan/auto_xunshan_state</span>
+      <div>
+        <button id="btn-save-state" class="btn-save">保存标志</button>
+        <button id="btn-reload-state" class="btn-cancel">重新加载</button>
+      </div>
+    </div>
+    <div class="small" style="margin:6px 0; color: #666;">
+      说明：此文件存储上次执行的日期（格式：YYYY-MM-DD），用于控制脚本每天只执行一次。清空此文件可使脚本今天重新执行。
+    </div>
+    <textarea id="state-editor" placeholder="加载中..." style="height: 100px;"></textarea>
   </div>
 </body>
 </html>

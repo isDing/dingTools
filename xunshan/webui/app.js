@@ -147,6 +147,10 @@ function switchTab(tabName) {
   if (tabName === 'editor') {
     loadScript();
   }
+  // 如果切换到完成标志标签页，加载状态内容
+  if (tabName === 'state') {
+    loadState();
+  }
 }
 
 // 加载脚本内容
@@ -260,6 +264,108 @@ async function saveScript() {
   }
 }
 
+// 加载完成标志内容
+async function loadState() {
+  const editorEl = document.getElementById('state-editor');
+  editorEl.value = '加载中...';
+  editorEl.disabled = true;
+
+  try {
+    const r = await fetchJSON('/cgi-bin/read_state.sh');
+    if (r && r.ok) {
+      // 优先使用 base64 解码
+      if (r.content_base64) {
+        const binaryString = atob(r.content_base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const decoder = new TextDecoder('utf-8');
+        editorEl.value = decoder.decode(bytes);
+      } else if (r.content !== undefined) {
+        editorEl.value = r.content;
+      } else {
+        editorEl.value = '';
+      }
+      editorEl.disabled = false;
+    } else {
+      editorEl.value = `加载失败: ${r && r.error ? r.error : '未知错误'}`;
+      editorEl.disabled = true;
+    }
+  } catch (e) {
+    editorEl.value = '加载失败，请重试: ' + e.message;
+    editorEl.disabled = true;
+  }
+}
+
+// 保存完成标志
+async function saveState() {
+  const editorEl = document.getElementById('state-editor');
+  const btnSave = document.getElementById('btn-save-state');
+  const content = editorEl.value;
+
+  if (!confirm('确定要保存完成标志吗？\n保存前会自动备份原文件到 auto_xunshan_state.bak')) {
+    return;
+  }
+
+  btnSave.disabled = true;
+  const originalText = btnSave.textContent;
+  btnSave.textContent = '保存中...';
+
+  try {
+    // 使用 base64 编码避免特殊字符问题
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(content);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Content = btoa(binary);
+
+    const formData = 'content_base64=' + base64Content;
+    const res = await fetch('/cgi-bin/save_state.sh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData
+    });
+    const txt = await res.text();
+    const r = JSON.parse(txt);
+
+    if (r && r.ok) {
+      btnSave.textContent = '保存成功';
+      setTimeout(() => {
+        btnSave.textContent = originalText;
+        btnSave.disabled = false;
+      }, 1500);
+
+      let msg = `完成标志保存成功！\n文件大小: ${r.size} 字节`;
+      if (r.permissions) {
+        msg += `\n文件权限: ${r.permissions}`;
+      }
+      alert(msg);
+    } else {
+      const errorMessages = {
+        'content_empty': '内容为空',
+        'backup_failed': '备份原文件失败',
+        'write_failed': '写入文件失败（需要 root 权限）',
+        'file_not_found': '保存后文件未找到',
+        'decode_failed': 'Base64 解码失败'
+      };
+
+      const errorMsg = r && r.error ? (errorMessages[r.error] || r.error) : '未知错误';
+      alert(`保存失败: ${errorMsg}`);
+      btnSave.textContent = originalText;
+      btnSave.disabled = false;
+    }
+  } catch (e) {
+    alert('保存失败，请重试: ' + e.message);
+    btnSave.textContent = originalText;
+    btnSave.disabled = false;
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   console.log('DOM loaded, initializing...');
 
@@ -269,6 +375,8 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-clear-log').addEventListener('click', clearLog);
   document.getElementById('btn-save-script').addEventListener('click', saveScript);
   document.getElementById('btn-reload-script').addEventListener('click', loadScript);
+  document.getElementById('btn-save-state').addEventListener('click', saveState);
+  document.getElementById('btn-reload-state').addEventListener('click', loadState);
 
   // 标签页切换
   const tabs = document.querySelectorAll('.tab');

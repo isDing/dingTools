@@ -96,6 +96,8 @@ adb push "$PROJECT_ROOT/webui/cgi-bin/stop.sh" "$WEBUI_REMOTE_DIR/cgi-bin/" >/de
 adb push "$PROJECT_ROOT/webui/cgi-bin/clear_log.sh" "$WEBUI_REMOTE_DIR/cgi-bin/" >/dev/null
 adb push "$PROJECT_ROOT/webui/cgi-bin/read_script.sh" "$WEBUI_REMOTE_DIR/cgi-bin/" >/dev/null
 adb push "$PROJECT_ROOT/webui/cgi-bin/save_script.sh" "$WEBUI_REMOTE_DIR/cgi-bin/" >/dev/null
+adb push "$PROJECT_ROOT/webui/cgi-bin/read_state.sh" "$WEBUI_REMOTE_DIR/cgi-bin/" >/dev/null
+adb push "$PROJECT_ROOT/webui/cgi-bin/save_state.sh" "$WEBUI_REMOTE_DIR/cgi-bin/" >/dev/null
 
 echo "[*] Setting executable permissions..."
 adb shell "chmod +x $WEBUI_REMOTE_DIR/cgi-bin/*.sh"

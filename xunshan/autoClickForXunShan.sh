@@ -467,15 +467,14 @@ mark_triggered() {
 
 # 主循环
 main() {
-    log "==== 脚本启动2 ===="
-
-    sleep 120
+    log "==== 脚本启动 ===="
+    sleep 10
 
     while true; do
         _hour=$(date +%H)
 
-        # 简化策略：从大于11点开始检测，若当日未执行，则随机延迟150-1950秒后执行一次
-        if [ "$_hour" -ge 11 ]; then
+        # 简化策略：从大于11点且小于20点开始检测，若当日未执行，则随机延迟150-1950秒后执行一次
+        if [[ "$_hour" -ge 11 && "$_hour" -le 19 ]]; then
             if ! has_triggered_today; then
                 log "触发时间到达，准备执行"
 
