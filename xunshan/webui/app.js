@@ -39,7 +39,10 @@ async function refresh() {
 
   try {
     const log = await fetchText('/cgi-bin/log.sh');
-    document.getElementById('log').value = log;
+    const logEl = document.getElementById('log');
+    logEl.value = log;
+    // 滚动到顶部，显示最新日志（日志已倒序）
+    logEl.scrollTop = 0;
   } catch (e) {
     document.getElementById('log').value = '日志获取失败';
   }

@@ -28,7 +28,7 @@
     .tab-content.active { display: block; }
     .editor-toolbar { margin: 6px 0; display: flex; justify-content: space-between; align-items: center; }
   </style>
-  <script defer src="/app.js?v=5"></script>
+  <script defer src="/app.js?v=6"></script>
   <script>
     // 兼容相对路径
   </script>
@@ -53,7 +53,7 @@
   <!-- 日志查看标签页 -->
   <div id="tab-log" class="tab-content active">
     <div class="small" style="margin:6px 0; display: flex; justify-content: space-between; align-items: center;">
-      <span>日志文件：/data/local/tmp/xunshan/xunshan.log</span>
+      <span>日志文件：/data/local/tmp/xunshan/xunshan.log（倒序显示，最新在最上）</span>
       <button id="btn-clear-log" class="btn-clear">清空日志</button>
     </div>
     <textarea id="log" readonly>加载中...</textarea>
