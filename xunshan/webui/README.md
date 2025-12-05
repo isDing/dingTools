@@ -42,6 +42,7 @@ su -c 'cd /data/local/tmp/xunshan/webui && /data/local/tmp/busybox httpd -p 127.
 - ✅ **停止脚本**：一键停止运行中的脚本
 - ✅ **查看日志**：实时查看最近 300 行日志
 - ✅ **清空日志**：清空日志文件（需确认）
+- ✅ **编辑脚本**：在线编辑 autoClickForXunShan.sh 脚本（自动备份）
 - ✅ **自动刷新**：每 10 秒自动更新状态和日志
 
 ## 开机自启

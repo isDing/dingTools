@@ -74,6 +74,8 @@ adb push "$DOC_LOCAL_DIR/cgi-bin/log.sh" "$DOC_REMOTE_DIR/cgi-bin/" >/dev/null
 adb push "$DOC_LOCAL_DIR/cgi-bin/start.sh" "$DOC_REMOTE_DIR/cgi-bin/" >/dev/null
 adb push "$DOC_LOCAL_DIR/cgi-bin/stop.sh" "$DOC_REMOTE_DIR/cgi-bin/" >/dev/null
 adb push "$DOC_LOCAL_DIR/cgi-bin/clear_log.sh" "$DOC_REMOTE_DIR/cgi-bin/" >/dev/null
+adb push "$DOC_LOCAL_DIR/cgi-bin/read_script.sh" "$DOC_REMOTE_DIR/cgi-bin/" >/dev/null
+adb push "$DOC_LOCAL_DIR/cgi-bin/save_script.sh" "$DOC_REMOTE_DIR/cgi-bin/" >/dev/null
 
 echo "[*] Setting executable permissions..."
 adb shell "chmod +x $DOC_REMOTE_DIR/cgi-bin/*.sh"

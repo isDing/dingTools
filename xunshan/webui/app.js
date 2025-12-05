@@ -121,13 +121,167 @@ async function clearLog() {
   }
 }
 
+// 标签页切换
+function switchTab(tabName) {
+  console.log('Switching to tab:', tabName);
+
+  // 切换标签页激活状态
+  document.querySelectorAll('.tab').forEach(tab => {
+    if (tab.dataset.tab === tabName) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+
+  // 切换内容区域
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+
+  // 如果切换到编辑器标签页，加载脚本内容
+  if (tabName === 'editor') {
+    loadScript();
+  }
+}
+
+// 加载脚本内容
+async function loadScript() {
+  const editorEl = document.getElementById('script-editor');
+  editorEl.value = '加载中...';
+  editorEl.disabled = true;
+
+  try {
+    const r = await fetchJSON('/cgi-bin/read_script.sh');
+    if (r && r.ok) {
+      // 优先使用 base64 解码（修复中文乱码）
+      if (r.content_base64) {
+        // 正确解码 UTF-8 中文字符
+        const binaryString = atob(r.content_base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const decoder = new TextDecoder('utf-8');
+        editorEl.value = decoder.decode(bytes);
+      } else if (r.content) {
+        // 处理转义的换行符
+        editorEl.value = r.content.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      } else {
+        editorEl.value = '脚本内容为空';
+      }
+      editorEl.disabled = false;
+    } else {
+      editorEl.value = `加载失败: ${r && r.error ? r.error : '未知错误'}`;
+      editorEl.disabled = true;
+    }
+  } catch (e) {
+    editorEl.value = '加载失败，请重试: ' + e.message;
+    editorEl.disabled = true;
+  }
+}
+
+// 保存脚本
+async function saveScript() {
+  const editorEl = document.getElementById('script-editor');
+  const btnSave = document.getElementById('btn-save-script');
+  const content = editorEl.value;
+
+  if (!content.trim()) {
+    alert('脚本内容不能为空');
+    return;
+  }
+
+  if (!confirm('确定要保存脚本吗？\n保存前会自动备份原文件到 autoClickForXunShan.sh.bak')) {
+    return;
+  }
+
+  btnSave.disabled = true;
+  const originalText = btnSave.textContent;
+  btnSave.textContent = '保存中...';
+
+  try {
+    // 使用 base64 编码避免 URL 编码问题
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(content);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Content = btoa(binary);
+
+    const formData = 'content_base64=' + base64Content;
+    const res = await fetch('/cgi-bin/save_script.sh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData
+    });
+    const txt = await res.text();
+    const r = JSON.parse(txt);
+
+    if (r && r.ok) {
+      btnSave.textContent = '保存成功';
+      setTimeout(() => {
+        btnSave.textContent = originalText;
+        btnSave.disabled = false;
+      }, 1500);
+
+      let msg = `脚本保存成功！\n文件大小: ${r.size} 字节`;
+      if (r.permissions) {
+        msg += `\n文件权限: ${r.permissions}`;
+      }
+      alert(msg);
+    } else {
+      const errorMessages = {
+        'content_empty': '脚本内容为空',
+        'backup_failed': '备份原文件失败',
+        'write_failed': '写入文件失败（需要 root 权限）',
+        'chmod_failed': '设置执行权限失败',
+        'file_not_found': '保存后文件未找到',
+        'not_executable': '文件不可执行',
+        'decode_failed': 'Base64 解码失败'
+      };
+
+      const errorMsg = r && r.error ? (errorMessages[r.error] || r.error) : '未知错误';
+      alert(`保存失败: ${errorMsg}`);
+      btnSave.textContent = originalText;
+      btnSave.disabled = false;
+    }
+  } catch (e) {
+    alert('保存失败，请重试: ' + e.message);
+    btnSave.textContent = originalText;
+    btnSave.disabled = false;
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM loaded, initializing...');
+
   document.getElementById('btn-refresh').addEventListener('click', refresh);
   document.getElementById('btn-start').addEventListener('click', startScript);
   document.getElementById('btn-stop').addEventListener('click', stopScript);
   document.getElementById('btn-clear-log').addEventListener('click', clearLog);
+  document.getElementById('btn-save-script').addEventListener('click', saveScript);
+  document.getElementById('btn-reload-script').addEventListener('click', loadScript);
+
+  // 标签页切换
+  const tabs = document.querySelectorAll('.tab');
+  console.log('Found tabs:', tabs.length);
+  tabs.forEach(tab => {
+    console.log('Adding click listener to tab:', tab.dataset.tab);
+    tab.addEventListener('click', () => {
+      console.log('Tab clicked:', tab.dataset.tab);
+      switchTab(tab.dataset.tab);
+    });
+  });
+
   refresh();
   // 自动刷新
   setInterval(refresh, 10000);
+
+  console.log('Initialization complete');
 });
 

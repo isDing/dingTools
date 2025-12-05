@@ -211,7 +211,7 @@ send_qq_message_internal() {
         sleep 0.3
     done
     sleep 0.5
-    input tap 970 895  # 发送
+    input tap 928 973  # 发送
     sleep 2
 
     input keyevent KEYCODE_BACK
@@ -450,6 +450,8 @@ mark_triggered() {
 # 主循环
 main() {
     log "==== 脚本启动 ===="
+
+    sleep 5
 
     while true; do
         _hour=$(date +%H)
