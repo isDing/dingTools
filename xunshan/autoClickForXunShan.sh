@@ -351,10 +351,28 @@ check_first_record_date_today_or_notify() {
     fi
 
     # 再检查是否存在 iv_valid 无效图标
-    _start=$((_date_line_no - 12)); [ $_start -lt 1 ] && _start=1
-    _end=$((_date_line_no + 12))
-    if sed -n "${_start},${_end}p" "$UI_LINES" | grep -q 'resource-id="cn.piesat.hnly.fcs:id/iv_valid"'; then
-        log "ERROR: 第一条记录存在 iv_valid 无效标识"
+    # 找到第一条记录所属的 ViewGroup 的结束位置
+    # 方法：从 tv_date 所在行开始向下找到下一个 index="1" 的 ViewGroup（第二条记录的开始）
+    _first_record_end=$_date_line_no
+    _line_count=$(wc -l < "$UI_LINES")
+    _i=$((_date_line_no + 1))
+
+    # 向下搜索，找到第二条记录的开始位置（包含 index="1" 的 ViewGroup）
+    while [ $_i -le $_line_count ]; do
+        _line=$(sed -n "${_i}p" "$UI_LINES")
+        # 检查是否是第二条记录的 ViewGroup（index="1" 且 class="android.view.ViewGroup"）
+        if echo "$_line" | grep -q 'class="android.view.ViewGroup"' && echo "$_line" | grep -q 'index="1"'; then
+            _first_record_end=$((_i - 1))
+            break
+        fi
+        _i=$((_i + 1))
+    done
+
+    # 在第一条记录的范围内查找 iv_valid
+    # 从第一条记录的 ViewGroup 开始位置到结束位置
+    _first_record_start=$((_rv_line + 1))
+    if sed -n "${_first_record_start},${_first_record_end}p" "$UI_LINES" | grep -q 'resource-id="cn.piesat.hnly.fcs:id/iv_valid"'; then
+        log "ERROR: 第一条记录存在 iv_valid 无效标识 (行范围: $_first_record_start-$_first_record_end)"
         send_qq_error "validity check: The first record invalid! Please try again!"
     fi
 
